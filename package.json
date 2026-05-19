@@ -1,12 +1,19 @@
 {
-  "name": "global_sqls",
-  "version": "0.1.0",
-  "description": "Multi-engine SQL MCP server (MSSQL, MySQL, PostgreSQL, Oracle) with named connection profiles and audit logging",
+  "name": "soham-global-sqls",
+  "version": "1.0.0",
+  "description": "Multi-engine SQL MCP server (MSSQL, MySQL, PostgreSQL, Oracle) with named connection profiles, audit logging, and a one-command setup wizard.",
   "type": "module",
   "main": "build/index.js",
   "bin": {
-    "global-sqls": "./build/index.js"
+    "soham-global-sqls": "./build/index.js",
+    "sgsql": "./build/index.js"
   },
+  "files": [
+    "build",
+    "connections.example.json",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc",
     "dev": "tsx watch src/index.ts",
@@ -18,7 +25,33 @@
     "test:coverage": "vitest run --coverage",
     "lint:eslint": "eslint src tests",
     "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
-    "format:check": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\""
+    "format:check": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\"",
+    "prepublishOnly": "npm run clean && npm run build && npm test"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "sql",
+    "mssql",
+    "mysql",
+    "postgres",
+    "postgresql",
+    "oracle",
+    "database",
+    "claude"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/krutpandya92/soham-global-sqls.git"
+  },
+  "homepage": "https://github.com/krutpandya92/soham-global-sqls#readme",
+  "bugs": {
+    "url": "https://github.com/krutpandya92/soham-global-sqls/issues"
+  },
+  "license": "MIT",
+  "author": "krutpandya92",
+  "engines": {
+    "node": ">=18.0.0"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
@@ -41,8 +74,5 @@
     "typescript": "^5.6.0",
     "typescript-eslint": "^8.59.3",
     "vitest": "^4.1.6"
-  },
-  "engines": {
-    "node": ">=18.0.0"
   }
 }
