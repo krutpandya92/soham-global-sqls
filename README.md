@@ -1,187 +1,185 @@
-# global_sqls
+# soham-global-sqls
 
-A multi-engine SQL MCP server: connect Claude (or any MCP client) to **Microsoft SQL Server, MySQL, PostgreSQL, and Oracle** databases through a single server, switch between connections at runtime, and audit every query.
-
-- Multi-engine — MSSQL, MySQL, PostgreSQL, Oracle
-- Switchable — pre-define named profiles, switch with `use_connection`
-- Read-only by default — writes are opt-in per profile via `allow_writes`
-- Audit log — one JSON-line `span` event per tool call: args, result summary, status, and per-phase timing (connect / execute / serialize)
-- Offline — once installed, no internet needed at runtime
+Multi-engine SQL Model Context Protocol (MCP) server. One process, four engines: **MSSQL · MySQL · PostgreSQL · Oracle**. Profile-based connections, audit logging, SQL parser guard, read-only by default.
 
 ---
 
 ## Install
 
-Requires Node.js >= 18.
+### Path A — npm (most users)
 
 ```bash
-git clone https://github.com/<your-org>/global_sqls.git
-cd global_sqls
-npm install
-npm run build
+npm install -g soham-global-sqls
+sgsql init          # creates ~/.global_sqls/connections.json
 ```
 
-> **Oracle note:** the bundled `oracledb` driver runs in **thin mode** by default — no extra install needed. If you have Oracle Instant Client on your PATH and want thick mode, set `"mode": "thick"` on the profile. With `"mode": "auto"` (default), thick mode is used only if Instant Client is detected.
+Then edit `~/.global_sqls/connections.json` and add the MCP client block shown below.
+
+### Path B — git clone (contributors / pinned source)
+
+```bash
+git clone https://github.com/krutpandya92/soham-global-sqls.git
+cd soham-global-sqls
+npm install
+npm run build
+npm link            # exposes `sgsql` and `soham-global-sqls` on PATH from this checkout
+sgsql init
+```
 
 ---
 
-## Configure
+## Configure `connections.json`
 
-1. Copy `connections.example.json` to `connections.json`:
+`sgsql init` copies `connections.example.json` to `~/.global_sqls/connections.json`. Edit it. Each profile is one database; the `default` field picks the one used at startup.
 
-   ```bash
-   cp connections.example.json connections.json
-   ```
+```json
+{
+  "default": "local-mssql",
+  "profiles": {
+    "local-mssql": {
+      "engine": "mssql",
+      "host": "localhost",
+      "port": 1433,
+      "database": "MyDb",
+      "user": "sa",
+      "password": "${MSSQL_PASSWORD}",
+      "encrypt": true,
+      "trustServerCert": true,
+      "allow_writes": false
+    }
+  }
+}
+```
 
-2. Edit `connections.json`. Each profile has an `engine` and engine-specific fields:
+### Required fields per engine
 
-   ```json
-   {
-     "default": "local-mssql",
-     "profiles": {
-       "local-mssql":  { "engine": "mssql",    "host": "localhost",     "port": 1433, "database": "MyDb",      "user": "sa",   "password": "${MSSQL_PASSWORD}",  "encrypt": true, "trustServerCert": true, "allow_writes": false },
-       "prod-mysql":   { "engine": "mysql",    "host": "db.example",    "port": 3306, "database": "app",       "user": "ro",   "password": "${MYSQL_PASSWORD}",  "ssl": false,                            "allow_writes": false },
-       "analytics-pg": { "engine": "postgres", "host": "wh.example",    "port": 5432, "database": "warehouse", "user": "ro",   "password": "${PG_PASSWORD}",     "ssl": "require",                        "allow_writes": false },
-       "legacy-oracle":{ "engine": "oracle",   "connectString": "h:1521/PDB",                                  "user": "app",  "password": "${ORACLE_PASSWORD}", "mode": "auto",                          "allow_writes": false }
-     }
-   }
-   ```
+| Engine    | Required                                    | Optional                              |
+|-----------|---------------------------------------------|---------------------------------------|
+| mssql     | host, port, database, user, password        | encrypt, trustServerCert, allow_writes|
+| mysql     | host, port, database, user, password        | ssl, allow_writes                     |
+| postgres  | host, port, database, user, password        | ssl (true/false/"require"), allow_writes |
+| oracle    | connectString, user, password               | mode ("auto"/"thin"/"thick"), allow_writes |
 
-   `${ENV_VAR}` placeholders are resolved from environment variables, so you can commit a template without secrets.
+### `${ENV_VAR}` placeholders
 
-3. Set the env vars before running, e.g. in PowerShell:
+Passwords use `${VAR_NAME}` syntax. The server resolves them from `process.env` at connect time. Set the variables in your **MCP client's `env` block** (see next section) — setting them in your shell will NOT work, because the MCP client spawns the server with a clean environment.
 
-   ```powershell
-   $env:MSSQL_PASSWORD = "..."
-   $env:PG_PASSWORD = "..."
-   ```
+### Interactive wizard
 
-4. (Optional) override the path:
-
-   ```powershell
-   $env:GLOBAL_SQLS_CONNECTIONS = "C:\path\to\connections.json"
-   ```
+```bash
+sgsql init --interactive
+```
+Prompts engine, host, port, etc., for one or more profiles. Writes the same file format.
 
 ---
 
-## Hook into Claude Desktop / Claude Code
+## Add to your MCP client
 
-Add to your MCP config (e.g. `~/.config/claude/claude_desktop_config.json` or `.claude/mcp_servers.json`):
+### Claude Code — user scope
+
+Add to `~/.claude.json` (Windows: `%USERPROFILE%\.claude.json`) under `mcpServers`:
 
 ```json
 {
   "mcpServers": {
-    "global_sqls": {
-      "command": "node",
-      "args": ["/absolute/path/to/global_sqls/build/index.js"],
+    "soham-global-sqls": {
+      "command": "sgsql",
       "env": {
-        "MSSQL_PASSWORD": "...",
-        "MYSQL_PASSWORD": "...",
-        "PG_PASSWORD": "...",
-        "ORACLE_PASSWORD": "..."
+        "GLOBAL_SQLS_CONNECTIONS": "C:/Users/you/.global_sqls/connections.json",
+        "MSSQL_PASSWORD": "your-password-here",
+        "AUDIT_LOG_DIR": "C:/Users/you/.global_sqls/logs"
       }
     }
   }
 }
 ```
 
-Restart your MCP client. You should see the `global_sqls` tools available.
-
----
-
-## Tools
-
-| Tool | Purpose |
-|------|---------|
-| `list_connections` | List all configured profiles and which is active |
-| `use_connection` | Switch the active profile (`{ name }`) |
-| `current_connection` | Show the active profile details |
-| `ping` | Verify the active connection is alive |
-| `list_databases` | List databases (engine-dependent) |
-| `list_schemas` | List schemas |
-| `list_tables` | List tables and views (optional `{ schema }`) |
-| `describe_table` / `list_columns` | Show column definitions |
-| `list_indexes` | Show indexes for a table |
-| `sample_table` | Return up to N rows from a table |
-| `run_query` | Run arbitrary SQL with parameters. Writes blocked unless `allow_writes=true`. |
-
----
-
-## Logging
-
-Every tool call is logged as one JSON line under `./logs/global_sqls-YYYY-MM-DD.log` (override the directory with `AUDIT_LOG_DIR`):
-
-```json
-{"ts":"2026-05-19T18:32:05.956Z","event":"span","requestId":"r-jcqxq6w4","tool":"run_query","profile":"prod-mysql","engine":"mysql","status":"ok","args":{"sql":"SELECT * FROM users WHERE id=?","params":["***REDACTED***"]},"result":{"rowCount":1,"truncated":false},"timing":{"total_ms":34,"execute_ms":29,"serialize_ms":3}}
+Or use the CLI:
+```bash
+claude mcp add soham-global-sqls -s user -- sgsql
 ```
 
-Fields: `ts`, `event` (always `"span"`), `requestId`, `tool`, `profile`, `engine`, `status` (`"ok"` | `"error"`), `args` (redacted), `result` or `error`, and `timing`. The `timing` block always carries `total_ms` and includes any of `connect_ms`, `execute_ms`, `serialize_ms` that the tool measured — use it to attribute slowness to a specific stage.
+### Claude Code — project scope
 
-Set `AUDIT_LOG_VERBOSE=true` to switch the same file to a multi-line, human-readable layout:
+Commit a `.mcp.json` at your repo root with the same block. Every teammate who clones and opens the repo in Claude Code gets the server.
 
-```
-─── 2026-05-19T18:32:05.956Z ─── run_query [prod-mysql/mysql] OK
-  req:    r-jcqxq6w4
-  args:   {"sql":"SELECT * FROM users WHERE id=?","params":["***REDACTED***"]}
-  result: rowCount=1 truncated=false
-  timing: total=34ms (execute=29 serialize=3)
-```
-
-Other audit knobs:
-
-| Env var | Default | What it does |
-|---|---|---|
-| `AUDIT_LOG_DIR` | `./logs` | Directory the daily log file is written to |
-| `AUDIT_LOG_MAX_BYTES` | `10485760` (10 MiB) | Rotate file (rename to `*.<ts>.old`) when it exceeds this size |
-| `AUDIT_LOG_VERBOSE` | `false` | Switch to multi-line human format |
-
-The MCP server only sees tool calls. To capture **your prompts** and **Claude's rendered replies** as well, enable Claude Code hooks (separate from this server). Example `~/.claude/settings.json`:
-
-```json
-{
-  "hooks": {
-    "UserPromptSubmit": [{ "command": "echo \"{{prompt}}\" >> ~/claude-prompts.log" }],
-    "Stop": [{ "command": "echo \"--- end of turn ---\" >> ~/claude-prompts.log" }]
-  }
-}
-```
-
-Correlate the two streams by timestamp.
-
----
-
-## Does it need internet?
-
-| Step | Internet? |
-|------|-----------|
-| `npm install` (first time) | Yes |
-| `git push` | Yes |
-| Oracle Instant Client install (thick mode only, optional) | Yes |
-| Running the server | **No** |
-| Connecting to DBs and querying | No (assuming the DB is reachable on your network) |
-| Writing audit logs | No (local `./logs/`) |
-
----
-
-## Development
+### Claude Code — local scope (private to you, this project)
 
 ```bash
-npm run dev         # tsx watch mode
-npm test            # vitest run
-npm run test:watch  # vitest watch mode
-npm run lint        # tsc --noEmit
+claude mcp add soham-global-sqls -s local -- sgsql
 ```
+Writes to `.claude/settings.local.json` (gitignored).
 
-Per-engine integration tests are gated by env vars and skipped by default:
+### Other clients
 
-```powershell
-$env:GLOBAL_SQLS_IT_MSSQL = "1"
-$env:GLOBAL_SQLS_IT_MYSQL = "1"
-npm test
-```
+| Client                | Config file                                                |
+|-----------------------|------------------------------------------------------------|
+| Claude Desktop        | `%APPDATA%\Claude\claude_desktop_config.json`              |
+| Cursor                | `%USERPROFILE%\.cursor\mcp.json`                           |
+| Windsurf              | `%USERPROFILE%\.codeium\windsurf\mcp_config.json`          |
+| VS Code (Copilot)     | `<repo>/.vscode/mcp.json`                                  |
 
 ---
+
+## Available tools
+
+- `list_connections` / `current_connection` / `use_connection` — switch profiles at runtime
+- `ping` — quick aliveness check on the active connection
+- `list_databases` / `list_schemas` / `list_tables` / `list_columns` / `list_indexes`
+- `describe_table` / `sample_table` — schema + first N rows
+- `run_query` — execute SELECT (or writes when `allow_writes: true`)
+
+---
+
+## Security model
+
+- **Read-only by default.** Writes require `allow_writes: true` on the profile AND the SQL parser must classify the statement as a write.
+- **Audit log.** Every tool invocation is appended to `${AUDIT_LOG_DIR}/audit-YYYY-MM-DD.log`. Set `AUDIT_LOG_VERBOSE=true` for full request/response bodies.
+- **SQL guard.** `node-sql-parser` rejects multi-statement payloads and write keywords unless explicitly allowed.
+- **PII redaction.** `PII_SCRUB=true` masks values matching common patterns (email, SSN-like, etc.) in audit output.
+
+---
+
+## Environment variables
+
+| Variable                       | Default                            | Purpose                                     |
+|--------------------------------|------------------------------------|---------------------------------------------|
+| `GLOBAL_SQLS_CONNECTIONS`      | `~/.global_sqls/connections.json`  | Path to your profiles file                  |
+| `MAX_ROWS`                     | `1000`                             | Cap on rows returned by `run_query`         |
+| `QUERY_TIMEOUT_MS`             | `30000`                            | Per-query timeout                           |
+| `AUDIT_LOG_DIR`                | `./logs`                           | Where audit logs are written                |
+| `AUDIT_LOG_MAX_BYTES`          | `10485760`                         | Rotate threshold per file                   |
+| `AUDIT_LOG_VERBOSE`            | `false`                            | Log full request/response bodies            |
+| `RATE_LIMIT_QUERY_PER_MIN`     | `60`                               | Cap on `run_query` calls per minute         |
+| `LOG_LEVEL`                    | `info`                             | debug / info / warn / error                 |
+| `PII_SCRUB`                    | `false`                            | Mask values matching common PII patterns    |
+| `PERMISSION_PROBE`             | `warn`                             | off / warn / enforce                        |
+
+Plus connection-file `${VAR}` placeholders for passwords (whatever names you use).
+
+---
+
+## Troubleshooting
+
+| Symptom                                              | Likely cause / fix                                                                 |
+|------------------------------------------------------|------------------------------------------------------------------------------------|
+| "Connections file not found"                         | `sgsql init`, or set `GLOBAL_SQLS_CONNECTIONS` in the MCP client `env` block.      |
+| "WRITE_DENIED: profile is read-only"                 | Set `"allow_writes": true` on that profile.                                        |
+| "Unresolved env var: ${MSSQL_PASSWORD}"              | The variable isn't in the MCP client `env` block. Put it there, not in your shell. |
+| "ENOENT: no such file" on a path that exists         | Forward slashes work everywhere on Windows JSON; check the path you put in `env`.  |
+| Driver install errors (oracledb, mssql)              | Some drivers need native build tools; see each driver's npm page for prerequisites.|
+
+---
+
+## Contributing
+
+PRs welcome. Run the test suite before pushing:
+```bash
+npm install
+npm test
+npm run lint
+```
 
 ## License
 
-MIT
+MIT © krutpandya92
