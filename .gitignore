@@ -1,13 +1,19 @@
 node_modules/
 build/
 coverage/
-logs/
 *.log
-connections.json
+logs/
+
+# Local env / secrets
 .env
 .env.*
-!.env.example
+connections.json
+
+# Editor / OS
 .DS_Store
-Thumbs.db
 .vscode/
 .idea/
+*.swp
+
+# Claude Code local settings
+.claude/settings.local.json
