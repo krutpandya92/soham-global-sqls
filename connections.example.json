@@ -1,0 +1,44 @@
+{
+  "default": "local-mssql",
+  "profiles": {
+    "local-mssql": {
+      "engine": "mssql",
+      "host": "localhost",
+      "port": 1433,
+      "database": "MyDb",
+      "user": "sa",
+      "password": "${MSSQL_PASSWORD}",
+      "encrypt": true,
+      "trustServerCert": true,
+      "allow_writes": false
+    },
+    "prod-mysql": {
+      "engine": "mysql",
+      "host": "db.example.com",
+      "port": 3306,
+      "database": "app",
+      "user": "ro_user",
+      "password": "${MYSQL_PASSWORD}",
+      "ssl": false,
+      "allow_writes": false
+    },
+    "analytics-pg": {
+      "engine": "postgres",
+      "host": "warehouse.example.com",
+      "port": 5432,
+      "database": "warehouse",
+      "user": "reader",
+      "password": "${PG_PASSWORD}",
+      "ssl": "require",
+      "allow_writes": false
+    },
+    "legacy-oracle": {
+      "engine": "oracle",
+      "connectString": "host.example.com:1521/ORCLPDB1",
+      "user": "app_user",
+      "password": "${ORACLE_PASSWORD}",
+      "mode": "auto",
+      "allow_writes": false
+    }
+  }
+}
