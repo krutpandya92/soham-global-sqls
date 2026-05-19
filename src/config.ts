@@ -3,6 +3,9 @@
  * Loads runtime config (paths, limits, log levels). DB credentials live in
  * connections.json — NOT here.
  */
+import fs from "node:fs";
+import path from "node:path";
+import { defaultConnectionsPath } from "./paths.js";
 
 function optional(key: string, fallback: string): string {
   return process.env[key] ?? fallback;
@@ -24,8 +27,40 @@ function optionalBool(key: string, fallback: boolean): boolean {
   throw new Error(`[Config] "${key}" must be "true" or "false", got: "${val}"`);
 }
 
+export interface ResolvedConnectionsPath {
+  resolved: string;
+  autoCreate: boolean;
+}
+
+/**
+ * Resolves the connections.json path with a 4-step search chain:
+ *   1. GLOBAL_SQLS_CONNECTIONS env var → use it (autoCreate if missing).
+ *   2. ~/.global_sqls/connections.json exists → use it.
+ *   3. ./connections.json exists → use it.
+ *   4. Fall back to ~/.global_sqls/connections.json and flag autoCreate.
+ * autoCreate is suppressed entirely when opts.autoInit === false.
+ */
+export function resolveConnectionsPath(opts: { autoInit: boolean }): ResolvedConnectionsPath {
+  const envVal = process.env.GLOBAL_SQLS_CONNECTIONS;
+  if (envVal) {
+    const resolved = envVal;
+    const autoCreate = opts.autoInit && !fs.existsSync(resolved);
+    return { resolved, autoCreate };
+  }
+  const homePath = defaultConnectionsPath();
+  if (fs.existsSync(homePath)) {
+    return { resolved: homePath, autoCreate: false };
+  }
+  const cwdPath = path.join(process.cwd(), "connections.json");
+  if (fs.existsSync(cwdPath)) {
+    return { resolved: cwdPath, autoCreate: false };
+  }
+  return { resolved: homePath, autoCreate: opts.autoInit };
+}
+
 export const config = {
-  connectionsPath: optional("GLOBAL_SQLS_CONNECTIONS", "./connections.json"),
+  // Kept as a convenience for code that just wants a string with no auto-create logic.
+  connectionsPath: resolveConnectionsPath({ autoInit: false }).resolved,
   query: {
     maxRows: optionalInt("MAX_ROWS", 1000),
     timeoutMs: optionalInt("QUERY_TIMEOUT_MS", 30_000),
