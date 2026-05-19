@@ -5,8 +5,8 @@
   "type": "module",
   "main": "build/index.js",
   "bin": {
-    "soham-global-sqls": "./build/index.js",
-    "sgsql": "./build/index.js"
+    "soham-global-sqls": "build/index.js",
+    "sgsql": "build/index.js"
   },
   "files": [
     "build",
