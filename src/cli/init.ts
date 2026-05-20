@@ -69,12 +69,18 @@ export async function runInit(argv: string[]): Promise<number> {
   const forwardPath = args.targetPath.replace(/\\/g, "/");
   console.log(`Created: ${args.targetPath}`);
   console.log("Next steps:");
-  console.log("  1. Edit the file. Each profile needs host/user/password/database (or connectString for Oracle).");
-  console.log("     Passwords use ${ENV_VAR} placeholders — set those vars in your MCP client's env block.");
-  console.log("  2. Add this block to your MCP client config (e.g. ~/.claude.json under \"mcpServers\"):");
-  console.log("       \"soham-global-sqls\": {");
-  console.log("         \"command\": \"sgsql\",");
-  console.log("         \"env\": { \"GLOBAL_SQLS_CONNECTIONS\": \"" + forwardPath + "\" }");
+  console.log(
+    "  1. Edit the file. Each profile needs host/user/password/database (or connectString for Oracle).",
+  );
+  console.log(
+    "     Passwords use ${ENV_VAR} placeholders — set those vars in your MCP client's env block.",
+  );
+  console.log(
+    '  2. Add this block to your MCP client config (e.g. ~/.claude.json under "mcpServers"):',
+  );
+  console.log('       "soham-global-sqls": {');
+  console.log('         "command": "sgsql",');
+  console.log('         "env": { "GLOBAL_SQLS_CONNECTIONS": "' + forwardPath + '" }');
   console.log("       }");
   return 0;
 }

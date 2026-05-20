@@ -38,7 +38,7 @@ async function main(): Promise<void> {
     fs.copyFileSync(bundledExamplePath(), resolved);
     console.error(
       `[soham-global-sqls] Created starter connections file at ${resolved}. ` +
-      "Edit it before running queries — every profile currently uses placeholder credentials.",
+        "Edit it before running queries — every profile currently uses placeholder credentials.",
     );
   }
 
@@ -59,7 +59,11 @@ async function main(): Promise<void> {
 
   const shutdown = async (): Promise<void> => {
     logger.info("soham-global-sqls shutting down");
-    try { await mgr.closeAll(); } catch { /* ignore */ }
+    try {
+      await mgr.closeAll();
+    } catch {
+      /* ignore */
+    }
     process.exit(0);
   };
   process.on("SIGINT", shutdown);

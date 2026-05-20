@@ -50,7 +50,10 @@ const oracleProfile = baseProfile.extend({
 });
 
 const profileSchema = z.discriminatedUnion("engine", [
-  mssqlProfile, mysqlProfile, pgProfile, oracleProfile,
+  mssqlProfile,
+  mysqlProfile,
+  pgProfile,
+  oracleProfile,
 ]);
 
 export type Profile = z.infer<typeof profileSchema>;
@@ -62,7 +65,10 @@ const fileSchema = z.object({
 
 function resolveEnv<T>(value: T): T {
   if (typeof value === "string") {
-    return value.replace(/\$\{([A-Z0-9_]+)\}/g, (_, name) => process.env[name] ?? "") as unknown as T;
+    return value.replace(
+      /\$\{([A-Z0-9_]+)\}/g,
+      (_, name) => process.env[name] ?? "",
+    ) as unknown as T;
   }
   if (Array.isArray(value)) return value.map(resolveEnv) as unknown as T;
   if (value && typeof value === "object") {

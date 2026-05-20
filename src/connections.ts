@@ -25,7 +25,9 @@ export class ConnectionManager {
 
   constructor(private bundle: ProfileBundle) {}
 
-  async init(): Promise<void> { await this.use(this.bundle.defaultName); }
+  async init(): Promise<void> {
+    await this.use(this.bundle.defaultName);
+  }
 
   activeName(): string {
     if (!this.active) throw new Error("[connections] no active connection");
@@ -47,7 +49,9 @@ export class ConnectionManager {
     // serialize concurrent switches
     const prev = this.switching;
     let release!: () => void;
-    this.switching = new Promise<void>((res) => { release = res; });
+    this.switching = new Promise<void>((res) => {
+      release = res;
+    });
     try {
       await prev;
       const profile = this.bundle.profiles[name];
@@ -56,13 +60,22 @@ export class ConnectionManager {
       await next.connect();
       const old = this.active;
       this.active = next;
-      if (old) { try { await old.close(); } catch { /* ignore close errors */ } }
+      if (old) {
+        try {
+          await old.close();
+        } catch {
+          /* ignore close errors */
+        }
+      }
     } finally {
       release();
     }
   }
 
   async closeAll(): Promise<void> {
-    if (this.active) { await this.active.close(); this.active = null; }
+    if (this.active) {
+      await this.active.close();
+      this.active = null;
+    }
   }
 }

@@ -36,16 +36,16 @@ function scriptedAsk(answers: string[]): (q: string) => Promise<string> {
 describe("runInitInteractive", () => {
   it("writes a valid single-profile mssql JSON to the default target", async () => {
     const ask = scriptedAsk([
-      "local-mssql",   // profile name
-      "mssql",         // engine
-      "localhost",     // host
-      "",              // port (accept default)
-      "MyDb",          // database
-      "sa",            // user
-      "",              // password env var name (accept default)
-      "n",             // allow_writes
-      "n",             // add another?
-      "local-mssql",   // default profile
+      "local-mssql", // profile name
+      "mssql", // engine
+      "localhost", // host
+      "", // port (accept default)
+      "MyDb", // database
+      "sa", // user
+      "", // password env var name (accept default)
+      "n", // allow_writes
+      "n", // add another?
+      "local-mssql", // default profile
     ]);
     const code = await runInitInteractive([], ask);
     expect(code).toBe(0);
@@ -65,9 +65,23 @@ describe("runInitInteractive", () => {
 
   it("supports adding two profiles and picking the second as default", async () => {
     const ask = scriptedAsk([
-      "a", "mysql", "h1", "", "db1", "u1", "", "n",
+      "a",
+      "mysql",
+      "h1",
+      "",
+      "db1",
+      "u1",
+      "",
+      "n",
       "y",
-      "b", "postgres", "h2", "", "db2", "u2", "", "y",
+      "b",
+      "postgres",
+      "h2",
+      "",
+      "db2",
+      "u2",
+      "",
+      "y",
       "n",
       "b",
     ]);
@@ -83,7 +97,12 @@ describe("runInitInteractive", () => {
 
   it("Oracle uses connectString instead of host/port/database", async () => {
     const ask = scriptedAsk([
-      "ora", "oracle", "host.example.com:1521/ORCLPDB1", "app_user", "", "n",
+      "ora",
+      "oracle",
+      "host.example.com:1521/ORCLPDB1",
+      "app_user",
+      "",
+      "n",
       "n",
       "ora",
     ]);

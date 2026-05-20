@@ -24,7 +24,9 @@ function rotateIfNeeded(p: string): void {
     if (s.size > config.audit.maxBytes) {
       renameSync(p, `${p}.${Date.now()}.old`);
     }
-  } catch { /* file doesn't exist yet */ }
+  } catch {
+    /* file doesn't exist yet */
+  }
 }
 
 function write(text: string): void {
@@ -109,7 +111,9 @@ function summarize(value: unknown): string {
   if (value && typeof value === "object" && !Array.isArray(value)) {
     const entries = Object.entries(value as Record<string, unknown>);
     if (entries.every(([, v]) => typeof v !== "object" || v === null)) {
-      return entries.map(([k, v]) => `${k}=${typeof v === "string" ? v : JSON.stringify(v)}`).join(" ");
+      return entries
+        .map(([k, v]) => `${k}=${typeof v === "string" ? v : JSON.stringify(v)}`)
+        .join(" ");
     }
   }
   return JSON.stringify(value);

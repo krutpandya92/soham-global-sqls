@@ -4,9 +4,7 @@
  */
 import mysql from "mysql2/promise";
 import type { Profile } from "../profiles.js";
-import type {
-  ColumnInfo, IndexInfo, QueryResult, SqlAdapter, TableInfo,
-} from "./types.js";
+import type { ColumnInfo, IndexInfo, QueryResult, SqlAdapter, TableInfo } from "./types.js";
 import { SqlError } from "./types.js";
 
 type MysqlProfile = Extract<Profile, { engine: "mysql" }>;
@@ -37,18 +35,35 @@ export class MysqlAdapter implements SqlAdapter {
     this.pool = mysql.createPool(poolOpts);
   }
 
-  async close(): Promise<void> { if (this.pool) { await this.pool.end(); this.pool = null; } }
-
-  async ping(): Promise<boolean> {
-    try { await this.pool!.execute("SELECT 1 AS ok"); return true; } catch { return false; }
+  async close(): Promise<void> {
+    if (this.pool) {
+      await this.pool.end();
+      this.pool = null;
+    }
   }
 
-  paramPlaceholder(_index: number): string { return "?"; }
-  quoteIdent(name: string): string { return `\`${name.replace(/`/g, "``")}\``; }
+  async ping(): Promise<boolean> {
+    try {
+      await this.pool!.execute("SELECT 1 AS ok");
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  paramPlaceholder(_index: number): string {
+    return "?";
+  }
+  quoteIdent(name: string): string {
+    return `\`${name.replace(/`/g, "``")}\``;
+  }
 
   async runQuery(sqlText: string, params: unknown[] = [], maxRows = 1000): Promise<QueryResult> {
     try {
-      const [rowsAny] = await this.pool!.execute(sqlText, params as Parameters<mysql.Pool["execute"]>[1]);
+      const [rowsAny] = await this.pool!.execute(
+        sqlText,
+        params as Parameters<mysql.Pool["execute"]>[1],
+      );
       const all = Array.isArray(rowsAny) ? (rowsAny as Record<string, unknown>[]) : [];
       const truncated = all.length > maxRows;
       const rows = truncated ? all.slice(0, maxRows) : all;
@@ -67,7 +82,9 @@ export class MysqlAdapter implements SqlAdapter {
     return rows.map((r) => r.SCHEMA_NAME as string);
   }
 
-  async listSchemas(): Promise<string[]> { return this.listDatabases(); }
+  async listSchemas(): Promise<string[]> {
+    return this.listDatabases();
+  }
 
   async listTables(schema?: string): Promise<TableInfo[]> {
     const s = schema ?? this.profile.database;
@@ -78,11 +95,13 @@ export class MysqlAdapter implements SqlAdapter {
     return rows.map((r) => ({
       name: r.TABLE_NAME as string,
       schema: r.TABLE_SCHEMA as string,
-      type: r.TABLE_TYPE === "VIEW" ? "view" as const : "table" as const,
+      type: r.TABLE_TYPE === "VIEW" ? ("view" as const) : ("table" as const),
     }));
   }
 
-  async describeTable(table: string, schema?: string): Promise<ColumnInfo[]> { return this.listColumns(table, schema); }
+  async describeTable(table: string, schema?: string): Promise<ColumnInfo[]> {
+    return this.listColumns(table, schema);
+  }
 
   async listColumns(table: string, schema?: string): Promise<ColumnInfo[]> {
     const s = schema ?? this.profile.database;
@@ -125,6 +144,10 @@ export class MysqlAdapter implements SqlAdapter {
     const qualified = schema
       ? `${this.quoteIdent(schema)}.${this.quoteIdent(table)}`
       : this.quoteIdent(table);
-    return this.runQuery(`SELECT * FROM ${qualified} LIMIT ${Math.max(1, Math.floor(limit))}`, [], limit);
+    return this.runQuery(
+      `SELECT * FROM ${qualified} LIMIT ${Math.max(1, Math.floor(limit))}`,
+      [],
+      limit,
+    );
   }
 }

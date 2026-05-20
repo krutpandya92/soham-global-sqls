@@ -3,9 +3,15 @@ import { handleRunQuery, handlePing } from "../../src/tools/query.js";
 
 function makeMgr(allowWrites = false) {
   const adapter = {
-    dialect: "mssql", profileName: "a",
+    dialect: "mssql",
+    profileName: "a",
     profile: { allow_writes: allowWrites },
-    runQuery: vi.fn().mockResolvedValue({ rows: [{ x: 1 }], rowCount: 1, truncated: false, fields: [{ name: "x" }] }),
+    runQuery: vi.fn().mockResolvedValue({
+      rows: [{ x: 1 }],
+      rowCount: 1,
+      truncated: false,
+      fields: [{ name: "x" }],
+    }),
     ping: vi.fn().mockResolvedValue(true),
   };
   return { activeAdapter: () => adapter, _adapter: adapter } as never;
@@ -20,7 +26,9 @@ describe("query tools", () => {
 
   it("run_query blocks INSERT when allow_writes=false", async () => {
     const m = makeMgr(false);
-    await expect(handleRunQuery(m, { sql: "INSERT INTO t VALUES (1)", params: [] })).rejects.toThrow(/WRITE_DENIED/);
+    await expect(
+      handleRunQuery(m, { sql: "INSERT INTO t VALUES (1)", params: [] }),
+    ).rejects.toThrow(/WRITE_DENIED/);
   });
 
   it("run_query permits INSERT when allow_writes=true", async () => {

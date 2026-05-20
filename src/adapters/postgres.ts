@@ -4,9 +4,7 @@
  */
 import pg from "pg";
 import type { Profile } from "../profiles.js";
-import type {
-  ColumnInfo, IndexInfo, QueryResult, SqlAdapter, TableInfo,
-} from "./types.js";
+import type { ColumnInfo, IndexInfo, QueryResult, SqlAdapter, TableInfo } from "./types.js";
 import { SqlError } from "./types.js";
 
 type PgProfile = Extract<Profile, { engine: "postgres" }>;
@@ -34,14 +32,28 @@ export class PostgresAdapter implements SqlAdapter {
     });
   }
 
-  async close(): Promise<void> { if (this.pool) { await this.pool.end(); this.pool = null; } }
-
-  async ping(): Promise<boolean> {
-    try { await this.pool!.query("SELECT 1 AS ok"); return true; } catch { return false; }
+  async close(): Promise<void> {
+    if (this.pool) {
+      await this.pool.end();
+      this.pool = null;
+    }
   }
 
-  paramPlaceholder(i: number): string { return `$${i}`; }
-  quoteIdent(name: string): string { return `"${name.replace(/"/g, '""')}"`; }
+  async ping(): Promise<boolean> {
+    try {
+      await this.pool!.query("SELECT 1 AS ok");
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  paramPlaceholder(i: number): string {
+    return `$${i}`;
+  }
+  quoteIdent(name: string): string {
+    return `"${name.replace(/"/g, '""')}"`;
+  }
 
   async runQuery(sqlText: string, params: unknown[] = [], maxRows = 1000): Promise<QueryResult> {
     try {
@@ -75,33 +87,63 @@ export class PostgresAdapter implements SqlAdapter {
     const params: unknown[] = [];
     let q =
       "SELECT schemaname, tablename, 'table' AS kind FROM pg_tables WHERE schemaname NOT LIKE 'pg_%' AND schemaname <> 'information_schema'";
-    if (schema) { params.push(schema); q += ` AND schemaname = $${params.length}`; }
-    q += " UNION ALL SELECT schemaname, viewname AS tablename, 'view' AS kind FROM pg_views WHERE schemaname NOT LIKE 'pg_%' AND schemaname <> 'information_schema'";
-    if (schema) { params.push(schema); q += ` AND schemaname = $${params.length}`; }
+    if (schema) {
+      params.push(schema);
+      q += ` AND schemaname = $${params.length}`;
+    }
+    q +=
+      " UNION ALL SELECT schemaname, viewname AS tablename, 'view' AS kind FROM pg_views WHERE schemaname NOT LIKE 'pg_%' AND schemaname <> 'information_schema'";
+    if (schema) {
+      params.push(schema);
+      q += ` AND schemaname = $${params.length}`;
+    }
     q += " ORDER BY schemaname, tablename";
-    const r = await this.pool!.query<{ schemaname: string; tablename: string; kind: "table" | "view" }>(q, params);
-    return r.rows.map((x) => ({ name: x.tablename, schema: x.schemaname, type: x.kind ?? "table" }));
+    const r = await this.pool!.query<{
+      schemaname: string;
+      tablename: string;
+      kind: "table" | "view";
+    }>(q, params);
+    return r.rows.map((x) => ({
+      name: x.tablename,
+      schema: x.schemaname,
+      type: x.kind ?? "table",
+    }));
   }
 
-  async describeTable(table: string, schema?: string): Promise<ColumnInfo[]> { return this.listColumns(table, schema); }
+  async describeTable(table: string, schema?: string): Promise<ColumnInfo[]> {
+    return this.listColumns(table, schema);
+  }
 
   async listColumns(table: string, schema?: string): Promise<ColumnInfo[]> {
     const params: unknown[] = [table];
     let q = `SELECT column_name, data_type, is_nullable, column_default
              FROM information_schema.columns WHERE table_name = $1`;
-    if (schema) { params.push(schema); q += ` AND table_schema = $${params.length}`; }
+    if (schema) {
+      params.push(schema);
+      q += ` AND table_schema = $${params.length}`;
+    }
     q += " ORDER BY ordinal_position";
-    const r = await this.pool!.query<{ column_name: string; data_type: string; is_nullable: string; column_default: string | null }>(q, params);
+    const r = await this.pool!.query<{
+      column_name: string;
+      data_type: string;
+      is_nullable: string;
+      column_default: string | null;
+    }>(q, params);
     return r.rows.map((x) => ({
-      name: x.column_name, dataType: x.data_type,
-      nullable: x.is_nullable === "YES", default: x.column_default,
+      name: x.column_name,
+      dataType: x.data_type,
+      nullable: x.is_nullable === "YES",
+      default: x.column_default,
     }));
   }
 
   async listIndexes(table: string, schema?: string): Promise<IndexInfo[]> {
     const params: unknown[] = [table];
     let q = `SELECT indexname, indexdef FROM pg_indexes WHERE tablename = $1`;
-    if (schema) { params.push(schema); q += ` AND schemaname = $${params.length}`; }
+    if (schema) {
+      params.push(schema);
+      q += ` AND schemaname = $${params.length}`;
+    }
     q += " ORDER BY indexname";
     const r = await this.pool!.query<{ indexname: string; indexdef: string }>(q, params);
     return r.rows.map((x) => {
@@ -112,7 +154,13 @@ export class PostgresAdapter implements SqlAdapter {
   }
 
   async sampleTable(table: string, limit: number, schema?: string): Promise<QueryResult> {
-    const qualified = schema ? `${this.quoteIdent(schema)}.${this.quoteIdent(table)}` : this.quoteIdent(table);
-    return this.runQuery(`SELECT * FROM ${qualified} LIMIT $1`, [Math.max(1, Math.floor(limit))], limit);
+    const qualified = schema
+      ? `${this.quoteIdent(schema)}.${this.quoteIdent(table)}`
+      : this.quoteIdent(table);
+    return this.runQuery(
+      `SELECT * FROM ${qualified} LIMIT $1`,
+      [Math.max(1, Math.floor(limit))],
+      limit,
+    );
   }
 }

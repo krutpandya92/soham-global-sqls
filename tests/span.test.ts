@@ -13,12 +13,20 @@ import { config } from "../src/config.js";
 
 function readLog(): Record<string, unknown>[] {
   const file = readdirSync(dir)[0];
-  return readFileSync(join(dir, file), "utf8").trim().split("\n").map((l) => JSON.parse(l));
+  return readFileSync(join(dir, file), "utf8")
+    .trim()
+    .split("\n")
+    .map((l) => JSON.parse(l));
 }
 
 describe("span", () => {
-  beforeEach(() => { dir = mkdtempSync(join(tmpdir(), "gss-")); (config.audit as { dir: string }).dir = dir; });
-  afterEach(() => { rmSync(dir, { recursive: true, force: true }); });
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), "gss-"));
+    (config.audit as { dir: string }).dir = dir;
+  });
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
 
   it("writes a single span event on finish", async () => {
     const s = startSpan("ping", {}, { profile: "p", engine: "mssql" });

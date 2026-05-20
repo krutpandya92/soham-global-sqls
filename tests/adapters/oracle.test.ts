@@ -17,12 +17,18 @@ vi.mock("oracledb", () => ({
 import { OracleAdapter } from "../../src/adapters/oracle.js";
 
 const profile = {
-  engine: "oracle" as const, connectString: "h:1521/PDB",
-  user: "u", password: "p", mode: "auto" as const, allow_writes: false,
+  engine: "oracle" as const,
+  connectString: "h:1521/PDB",
+  user: "u",
+  password: "p",
+  mode: "auto" as const,
+  allow_writes: false,
 };
 
 describe("OracleAdapter", () => {
-  beforeEach(() => { mockConn.execute.mockReset(); });
+  beforeEach(() => {
+    mockConn.execute.mockReset();
+  });
 
   it("uses :1, :2 placeholders", () => {
     const a = new OracleAdapter("test", profile);

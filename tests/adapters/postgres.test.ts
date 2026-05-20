@@ -6,19 +6,39 @@ const { mockPool } = vi.hoisted(() => {
 });
 
 vi.mock("pg", () => ({
-  default: { Pool: vi.fn().mockImplementation(class { query = mockPool.query; end = mockPool.end; }) },
-  Pool: vi.fn().mockImplementation(class { query = mockPool.query; end = mockPool.end; }),
+  default: {
+    Pool: vi.fn().mockImplementation(
+      class {
+        query = mockPool.query;
+        end = mockPool.end;
+      },
+    ),
+  },
+  Pool: vi.fn().mockImplementation(
+    class {
+      query = mockPool.query;
+      end = mockPool.end;
+    },
+  ),
 }));
 
 import { PostgresAdapter } from "../../src/adapters/postgres.js";
 
 const profile = {
-  engine: "postgres" as const, host: "h", port: 5432, database: "d",
-  user: "u", password: "p", ssl: false as const, allow_writes: false,
+  engine: "postgres" as const,
+  host: "h",
+  port: 5432,
+  database: "d",
+  user: "u",
+  password: "p",
+  ssl: false as const,
+  allow_writes: false,
 };
 
 describe("PostgresAdapter", () => {
-  beforeEach(() => { mockPool.query.mockReset(); });
+  beforeEach(() => {
+    mockPool.query.mockReset();
+  });
 
   it("uses $1, $2 placeholders", () => {
     const a = new PostgresAdapter("test", profile);

@@ -4,7 +4,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 let dir: string;
-const cfg = vi.hoisted(() => ({ audit: { dir: "", maxBytes: 10 * 1024 * 1024, verbose: false }, pii: { scrub: false } }));
+const cfg = vi.hoisted(() => ({
+  audit: { dir: "", maxBytes: 10 * 1024 * 1024, verbose: false },
+  pii: { scrub: false },
+}));
 vi.mock("../src/config.js", () => ({ config: cfg }));
 
 import { logSpan } from "../src/audit.js";
@@ -20,7 +23,9 @@ describe("audit.logSpan", () => {
     cfg.audit.dir = dir;
     cfg.audit.verbose = false;
   });
-  afterEach(() => { rmSync(dir, { recursive: true, force: true }); });
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
 
   it("writes JSONL with event=span", () => {
     logSpan({

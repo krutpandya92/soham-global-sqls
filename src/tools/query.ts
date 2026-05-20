@@ -17,7 +17,9 @@ export async function handleRunQuery(
   const profile = adapter.profile as { allow_writes: boolean };
   const kind = classifyStatement(args.sql, adapter.dialect);
   if (kind === "write" && !profile.allow_writes) {
-    throw new Error(`WRITE_DENIED: profile "${adapter.profileName}" is read-only. Set allow_writes=true in connections.json to permit writes.`);
+    throw new Error(
+      `WRITE_DENIED: profile "${adapter.profileName}" is read-only. Set allow_writes=true in connections.json to permit writes.`,
+    );
   }
   return adapter.runQuery(args.sql, args.params ?? [], config.query.maxRows);
 }
@@ -37,7 +39,10 @@ export function register(server: McpServer, mgr: ConnectionManager): void {
       const a = mgr.activeAdapter();
       const span = startSpan("run_query", args, { profile: a.profileName, engine: a.dialect });
       try {
-        const r = await span.phase("execute", () => handleRunQuery(mgr, args)) as { rowCount: number; truncated: boolean };
+        const r = (await span.phase("execute", () => handleRunQuery(mgr, args))) as {
+          rowCount: number;
+          truncated: boolean;
+        };
         const text = await span.phase("serialize", async () => JSON.stringify(r, null, 2));
         span.finish({ result: { rowCount: r.rowCount, truncated: r.truncated } });
         return { content: [{ type: "text", text }] };

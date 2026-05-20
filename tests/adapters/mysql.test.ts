@@ -1,8 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { mockConn, mockPool } = vi.hoisted(() => {
+const { mockPool } = vi.hoisted(() => {
   const mockConn = { query: vi.fn(), execute: vi.fn(), end: vi.fn(), ping: vi.fn() };
-  const mockPool = { getConnection: vi.fn().mockResolvedValue(mockConn), query: vi.fn(), end: vi.fn(), execute: vi.fn() };
+  const mockPool = {
+    getConnection: vi.fn().mockResolvedValue(mockConn),
+    query: vi.fn(),
+    end: vi.fn(),
+    execute: vi.fn(),
+  };
   return { mockConn, mockPool };
 });
 
@@ -14,12 +19,21 @@ vi.mock("mysql2/promise", () => ({
 import { MysqlAdapter } from "../../src/adapters/mysql.js";
 
 const profile = {
-  engine: "mysql" as const, host: "h", port: 3306, database: "d",
-  user: "u", password: "p", ssl: false as const, allow_writes: false,
+  engine: "mysql" as const,
+  host: "h",
+  port: 3306,
+  database: "d",
+  user: "u",
+  password: "p",
+  ssl: false as const,
+  allow_writes: false,
 };
 
 describe("MysqlAdapter", () => {
-  beforeEach(() => { mockPool.execute.mockReset(); mockPool.query.mockReset(); });
+  beforeEach(() => {
+    mockPool.execute.mockReset();
+    mockPool.query.mockReset();
+  });
 
   it("uses ? placeholders", () => {
     const a = new MysqlAdapter("test", profile);
@@ -35,7 +49,8 @@ describe("MysqlAdapter", () => {
 
   it("listTables uses information_schema.TABLES", async () => {
     mockPool.execute.mockResolvedValueOnce([
-      [{ TABLE_SCHEMA: "app", TABLE_NAME: "users", TABLE_TYPE: "BASE TABLE" }], [],
+      [{ TABLE_SCHEMA: "app", TABLE_NAME: "users", TABLE_TYPE: "BASE TABLE" }],
+      [],
     ]);
     const a = new MysqlAdapter("test", profile);
     await a.connect();

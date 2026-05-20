@@ -13,12 +13,22 @@ vi.mock("mssql", () => ({
 import { MssqlAdapter } from "../../src/adapters/mssql.js";
 
 const profile = {
-  engine: "mssql" as const, host: "h", port: 1433, database: "d",
-  user: "u", password: "p", encrypt: true, trustServerCert: true, allow_writes: false,
+  engine: "mssql" as const,
+  host: "h",
+  port: 1433,
+  database: "d",
+  user: "u",
+  password: "p",
+  encrypt: true,
+  trustServerCert: true,
+  allow_writes: false,
 };
 
 describe("MssqlAdapter", () => {
-  beforeEach(() => { mockRequest.input.mockClear(); mockRequest.query.mockReset(); });
+  beforeEach(() => {
+    mockRequest.input.mockClear();
+    mockRequest.query.mockReset();
+  });
 
   it("uses @p1 style placeholders", () => {
     const a = new MssqlAdapter("test", profile);

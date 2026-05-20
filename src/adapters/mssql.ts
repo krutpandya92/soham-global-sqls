@@ -4,9 +4,7 @@
  */
 import sql from "mssql";
 import type { Profile } from "../profiles.js";
-import type {
-  ColumnInfo, IndexInfo, QueryResult, SqlAdapter, TableInfo,
-} from "./types.js";
+import type { ColumnInfo, IndexInfo, QueryResult, SqlAdapter, TableInfo } from "./types.js";
 import { SqlError } from "./types.js";
 
 type MssqlProfile = Extract<Profile, { engine: "mssql" }>;
@@ -38,15 +36,27 @@ export class MssqlAdapter implements SqlAdapter {
   }
 
   async close(): Promise<void> {
-    if (this.pool) { await this.pool.close(); this.pool = null; }
+    if (this.pool) {
+      await this.pool.close();
+      this.pool = null;
+    }
   }
 
   async ping(): Promise<boolean> {
-    try { await this.pool!.request().query("SELECT 1 AS ok"); return true; } catch { return false; }
+    try {
+      await this.pool!.request().query("SELECT 1 AS ok");
+      return true;
+    } catch {
+      return false;
+    }
   }
 
-  paramPlaceholder(i: number): string { return `@p${i}`; }
-  quoteIdent(name: string): string { return `[${name.replace(/]/g, "]]")}]`; }
+  paramPlaceholder(i: number): string {
+    return `@p${i}`;
+  }
+  quoteIdent(name: string): string {
+    return `[${name.replace(/]/g, "]]")}]`;
+  }
 
   async runQuery(sqlText: string, params: unknown[] = [], maxRows = 1000): Promise<QueryResult> {
     const req = this.pool!.request();
@@ -80,13 +90,16 @@ export class MssqlAdapter implements SqlAdapter {
 
   async listTables(schema?: string): Promise<TableInfo[]> {
     const req = this.pool!.request();
-    let q =
-      "SELECT TABLE_SCHEMA, TABLE_NAME, TABLE_TYPE FROM INFORMATION_SCHEMA.TABLES";
-    if (schema) { q += " WHERE TABLE_SCHEMA = @p1"; req.input("p1", schema); }
+    let q = "SELECT TABLE_SCHEMA, TABLE_NAME, TABLE_TYPE FROM INFORMATION_SCHEMA.TABLES";
+    if (schema) {
+      q += " WHERE TABLE_SCHEMA = @p1";
+      req.input("p1", schema);
+    }
     q += " ORDER BY TABLE_SCHEMA, TABLE_NAME";
     const r = await req.query<{ TABLE_SCHEMA: string; TABLE_NAME: string; TABLE_TYPE: string }>(q);
     return r.recordset.map((x) => ({
-      name: x.TABLE_NAME, schema: x.TABLE_SCHEMA,
+      name: x.TABLE_NAME,
+      schema: x.TABLE_SCHEMA,
       type: x.TABLE_TYPE === "VIEW" ? "view" : "table",
     }));
   }
@@ -97,15 +110,24 @@ export class MssqlAdapter implements SqlAdapter {
 
   async listColumns(table: string, schema?: string): Promise<ColumnInfo[]> {
     const req = this.pool!.request().input("t", table);
-    let q =
-      `SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE, COLUMN_DEFAULT
+    let q = `SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE, COLUMN_DEFAULT
        FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = @t`;
-    if (schema) { q += " AND TABLE_SCHEMA = @s"; req.input("s", schema); }
+    if (schema) {
+      q += " AND TABLE_SCHEMA = @s";
+      req.input("s", schema);
+    }
     q += " ORDER BY ORDINAL_POSITION";
-    const r = await req.query<{ COLUMN_NAME: string; DATA_TYPE: string; IS_NULLABLE: string; COLUMN_DEFAULT: string | null }>(q);
+    const r = await req.query<{
+      COLUMN_NAME: string;
+      DATA_TYPE: string;
+      IS_NULLABLE: string;
+      COLUMN_DEFAULT: string | null;
+    }>(q);
     return r.recordset.map((x) => ({
-      name: x.COLUMN_NAME, dataType: x.DATA_TYPE,
-      nullable: x.IS_NULLABLE === "YES", default: x.COLUMN_DEFAULT,
+      name: x.COLUMN_NAME,
+      dataType: x.DATA_TYPE,
+      nullable: x.IS_NULLABLE === "YES",
+      default: x.COLUMN_DEFAULT,
     }));
   }
 
@@ -119,20 +141,34 @@ export class MssqlAdapter implements SqlAdapter {
       JOIN sys.objects o ON o.object_id = i.object_id
       JOIN sys.schemas s ON o.schema_id = s.schema_id
       WHERE o.name = @t AND i.name IS NOT NULL`;
-    if (schema) { q += " AND s.name = @s"; req.input("s", schema); }
+    if (schema) {
+      q += " AND s.name = @s";
+      req.input("s", schema);
+    }
     q += " ORDER BY i.name, ic.key_ordinal";
     const r = await req.query<{ index_name: string; is_unique: boolean; column_name: string }>(q);
     const map = new Map<string, IndexInfo>();
     for (const row of r.recordset) {
       const existing = map.get(row.index_name);
       if (existing) existing.columns.push(row.column_name);
-      else map.set(row.index_name, { name: row.index_name, unique: row.is_unique, columns: [row.column_name] });
+      else
+        map.set(row.index_name, {
+          name: row.index_name,
+          unique: row.is_unique,
+          columns: [row.column_name],
+        });
     }
     return Array.from(map.values());
   }
 
   async sampleTable(table: string, limit: number, schema?: string): Promise<QueryResult> {
-    const qualified = schema ? `${this.quoteIdent(schema)}.${this.quoteIdent(table)}` : this.quoteIdent(table);
-    return this.runQuery(`SELECT TOP ${Math.max(1, Math.floor(limit))} * FROM ${qualified}`, [], limit);
+    const qualified = schema
+      ? `${this.quoteIdent(schema)}.${this.quoteIdent(table)}`
+      : this.quoteIdent(table);
+    return this.runQuery(
+      `SELECT TOP ${Math.max(1, Math.floor(limit))} * FROM ${qualified}`,
+      [],
+      limit,
+    );
   }
 }

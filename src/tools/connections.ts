@@ -42,7 +42,10 @@ export function register(server: McpServer, mgr: ConnectionManager): void {
       const r = await handleList(mgr);
       span.finish({ result: { count: r.profiles.length } });
       return { content: [{ type: "text", text: JSON.stringify(r, null, 2) }] };
-    } catch (e) { span.fail(e as Error); throw e; }
+    } catch (e) {
+      span.fail(e as Error);
+      throw e;
+    }
   });
 
   server.tool(
@@ -55,7 +58,10 @@ export function register(server: McpServer, mgr: ConnectionManager): void {
         const r = await handleUse(mgr, { name });
         span.finish({ result: r });
         return { content: [{ type: "text", text: JSON.stringify(r, null, 2) }] };
-      } catch (e) { span.fail(e as Error); throw e; }
+      } catch (e) {
+        span.fail(e as Error);
+        throw e;
+      }
     },
   );
 
@@ -66,7 +72,9 @@ export function register(server: McpServer, mgr: ConnectionManager): void {
       const a = mgr.activeAdapter();
       profile = a.profileName;
       engine = a.dialect;
-    } catch { /* no active yet */ }
+    } catch {
+      /* no active yet */
+    }
     const ctx: Parameters<typeof startSpan>[2] = {};
     if (profile !== undefined) ctx.profile = profile;
     if (engine !== undefined) ctx.engine = engine;
@@ -75,6 +83,9 @@ export function register(server: McpServer, mgr: ConnectionManager): void {
       const r = await handleCurrent(mgr);
       span.finish({ result: r });
       return { content: [{ type: "text", text: JSON.stringify(r, null, 2) }] };
-    } catch (e) { span.fail(e as Error); throw e; }
+    } catch (e) {
+      span.fail(e as Error);
+      throw e;
+    }
   });
 }

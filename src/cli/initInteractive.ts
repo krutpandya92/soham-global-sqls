@@ -45,11 +45,16 @@ function parse(argv: string[]): { targetPath: string; force: boolean } {
   return { targetPath, force };
 }
 
-async function askProfile(ask: Asker, fallbackName: string): Promise<{ name: string; profile: Record<string, unknown> }> {
+async function askProfile(
+  ask: Asker,
+  fallbackName: string,
+): Promise<{ name: string; profile: Record<string, unknown> }> {
   const name = (await ask(`Profile name [${fallbackName}]: `)).trim() || fallbackName;
   let engine = (await ask("Engine (mssql/mysql/postgres/oracle): ")).trim().toLowerCase() as Engine;
   while (!["mssql", "mysql", "postgres", "oracle"].includes(engine)) {
-    engine = (await ask("  must be one of mssql/mysql/postgres/oracle: ")).trim().toLowerCase() as Engine;
+    engine = (await ask("  must be one of mssql/mysql/postgres/oracle: "))
+      .trim()
+      .toLowerCase() as Engine;
   }
 
   const profile: Record<string, unknown> = { engine };
@@ -57,7 +62,8 @@ async function askProfile(ask: Asker, fallbackName: string): Promise<{ name: str
   if (engine === "oracle") {
     profile.connectString = (await ask("Connect string (host:port/service): ")).trim();
     profile.user = (await ask("User: ")).trim();
-    const pwEnv = (await ask("Password env-var name [ORACLE_PASSWORD]: ")).trim() || "ORACLE_PASSWORD";
+    const pwEnv =
+      (await ask("Password env-var name [ORACLE_PASSWORD]: ")).trim() || "ORACLE_PASSWORD";
     profile.password = "${" + pwEnv + "}";
     profile.mode = "auto";
   } else {
@@ -67,7 +73,8 @@ async function askProfile(ask: Asker, fallbackName: string): Promise<{ name: str
     profile.database = (await ask("Database: ")).trim();
     profile.user = (await ask("User: ")).trim();
     const defaultEnvName = engine.toUpperCase() + "_PASSWORD";
-    const pwEnv = (await ask(`Password env-var name [${defaultEnvName}]: `)).trim() || defaultEnvName;
+    const pwEnv =
+      (await ask(`Password env-var name [${defaultEnvName}]: `)).trim() || defaultEnvName;
     profile.password = "${" + pwEnv + "}";
   }
 
@@ -92,10 +99,12 @@ export async function runInitInteractive(argv: string[], askInjected?: Asker): P
   }
 
   let rl: readline.Interface | undefined;
-  const ask: Asker = askInjected ?? (async (q: string) => {
-    if (!rl) rl = readline.createInterface({ input, output });
-    return rl.question(q);
-  });
+  const ask: Asker =
+    askInjected ??
+    (async (q: string) => {
+      if (!rl) rl = readline.createInterface({ input, output });
+      return rl.question(q);
+    });
 
   const profiles: Record<string, Record<string, unknown>> = {};
   let i = 1;

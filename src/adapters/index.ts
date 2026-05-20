@@ -11,10 +11,14 @@ import { OracleAdapter } from "./oracle.js";
 
 export function createAdapter(name: string, profile: Profile): SqlAdapter {
   switch (profile.engine) {
-    case "mssql":    return new MssqlAdapter(name, profile);
-    case "mysql":    return new MysqlAdapter(name, profile);
-    case "postgres": return new PostgresAdapter(name, profile);
-    case "oracle":   return new OracleAdapter(name, profile);
+    case "mssql":
+      return new MssqlAdapter(name, profile);
+    case "mysql":
+      return new MysqlAdapter(name, profile);
+    case "postgres":
+      return new PostgresAdapter(name, profile);
+    case "oracle":
+      return new OracleAdapter(name, profile);
   }
 }
 

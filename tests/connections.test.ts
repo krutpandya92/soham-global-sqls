@@ -3,14 +3,22 @@ import type { SqlAdapter } from "../src/adapters/types.js";
 
 function makeAdapter(name: string): SqlAdapter {
   return {
-    dialect: "mssql", profileName: name, profile: {} as never,
+    dialect: "mssql",
+    profileName: name,
+    profile: {} as never,
     connect: vi.fn().mockResolvedValue(undefined),
     close: vi.fn().mockResolvedValue(undefined),
     ping: vi.fn().mockResolvedValue(true),
-    runQuery: vi.fn(), listDatabases: vi.fn(), listSchemas: vi.fn(),
-    listTables: vi.fn(), describeTable: vi.fn(), listColumns: vi.fn(),
-    listIndexes: vi.fn(), sampleTable: vi.fn(),
-    quoteIdent: (n) => n, paramPlaceholder: (i) => `@p${i}`,
+    runQuery: vi.fn(),
+    listDatabases: vi.fn(),
+    listSchemas: vi.fn(),
+    listTables: vi.fn(),
+    describeTable: vi.fn(),
+    listColumns: vi.fn(),
+    listIndexes: vi.fn(),
+    sampleTable: vi.fn(),
+    quoteIdent: (n) => n,
+    paramPlaceholder: (i) => `@p${i}`,
   };
 }
 
@@ -22,12 +30,34 @@ const { mockFactory } = vi.hoisted(() => {
 vi.mock("../src/adapters/index.js", () => ({ createAdapter: (n: string) => mockFactory(n) }));
 
 const profiles = {
-  a: { engine: "mssql", host: "h", port: 1, database: "d", user: "u", password: "p", encrypt: true, trustServerCert: true, allow_writes: false } as const,
-  b: { engine: "mssql", host: "h2", port: 1, database: "d", user: "u", password: "p", encrypt: true, trustServerCert: true, allow_writes: true } as const,
+  a: {
+    engine: "mssql",
+    host: "h",
+    port: 1,
+    database: "d",
+    user: "u",
+    password: "p",
+    encrypt: true,
+    trustServerCert: true,
+    allow_writes: false,
+  } as const,
+  b: {
+    engine: "mssql",
+    host: "h2",
+    port: 1,
+    database: "d",
+    user: "u",
+    password: "p",
+    encrypt: true,
+    trustServerCert: true,
+    allow_writes: true,
+  } as const,
 };
 
 describe("ConnectionManager", () => {
-  beforeEach(() => { mockFactory.mockReset(); });
+  beforeEach(() => {
+    mockFactory.mockReset();
+  });
 
   it("initializes with default profile", async () => {
     const adA = makeAdapter("a");
@@ -40,7 +70,8 @@ describe("ConnectionManager", () => {
   });
 
   it("switches connections, closes old, opens new", async () => {
-    const adA = makeAdapter("a"); const adB = makeAdapter("b");
+    const adA = makeAdapter("a");
+    const adB = makeAdapter("b");
     mockFactory.mockReturnValueOnce(adA).mockReturnValueOnce(adB);
     const { ConnectionManager } = await import("../src/connections.js");
     const mgr = new ConnectionManager({ defaultName: "a", profiles });
@@ -52,7 +83,8 @@ describe("ConnectionManager", () => {
   });
 
   it("failed switch keeps previous adapter active", async () => {
-    const adA = makeAdapter("a"); const adB = makeAdapter("b");
+    const adA = makeAdapter("a");
+    const adB = makeAdapter("b");
     (adB.connect as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error("nope"));
     mockFactory.mockReturnValueOnce(adA).mockReturnValueOnce(adB);
     const { ConnectionManager } = await import("../src/connections.js");
@@ -79,7 +111,19 @@ describe("ConnectionManager", () => {
     const mgr = new ConnectionManager({ defaultName: "a", profiles });
     await mgr.init();
     const list = mgr.list();
-    expect(list).toContainEqual({ name: "a", engine: "mssql", database: "d", isActive: true, allow_writes: false });
-    expect(list).toContainEqual({ name: "b", engine: "mssql", database: "d", isActive: false, allow_writes: true });
+    expect(list).toContainEqual({
+      name: "a",
+      engine: "mssql",
+      database: "d",
+      isActive: true,
+      allow_writes: false,
+    });
+    expect(list).toContainEqual({
+      name: "b",
+      engine: "mssql",
+      database: "d",
+      isActive: false,
+      allow_writes: true,
+    });
   });
 });

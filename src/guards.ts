@@ -224,10 +224,14 @@ export function bracket(identifier: string): string {
 import type { Dialect } from "./adapters/types.js";
 
 const READ_KEYWORDS = /^\s*(WITH\s|SELECT\b|SHOW\b|DESCRIBE\b|DESC\b|EXPLAIN\b|VALUES\b|TABLE\b)/i;
-const WRITE_KEYWORDS = /^\s*(INSERT\b|UPDATE\b|DELETE\b|MERGE\b|REPLACE\b|TRUNCATE\b|CREATE\b|ALTER\b|DROP\b|GRANT\b|REVOKE\b|RENAME\b|CALL\b|EXEC\b|EXECUTE\b|COMMIT\b|ROLLBACK\b|SAVEPOINT\b|SET\b|LOCK\b|UNLOCK\b|VACUUM\b|ANALYZE\b|REINDEX\b)/i;
+const WRITE_KEYWORDS =
+  /^\s*(INSERT\b|UPDATE\b|DELETE\b|MERGE\b|REPLACE\b|TRUNCATE\b|CREATE\b|ALTER\b|DROP\b|GRANT\b|REVOKE\b|RENAME\b|CALL\b|EXEC\b|EXECUTE\b|COMMIT\b|ROLLBACK\b|SAVEPOINT\b|SET\b|LOCK\b|UNLOCK\b|VACUUM\b|ANALYZE\b|REINDEX\b)/i;
 
 export function classifyStatement(sql: string, _dialect: Dialect): "read" | "write" {
-  const trimmed = sql.replace(/^(?:\s*--.*\n)+/g, "").replace(/^\s*\/\*[\s\S]*?\*\/\s*/g, "").trim();
+  const trimmed = sql
+    .replace(/^(?:\s*--.*\n)+/g, "")
+    .replace(/^\s*\/\*[\s\S]*?\*\/\s*/g, "")
+    .trim();
   if (READ_KEYWORDS.test(trimmed)) return "read";
   if (WRITE_KEYWORDS.test(trimmed)) return "write";
   return "write"; // safe default

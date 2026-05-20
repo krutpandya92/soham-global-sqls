@@ -16,8 +16,12 @@ beforeEach(() => {
   process.env.USERPROFILE = tmpRoot;
   logs = [];
   errs = [];
-  vi.spyOn(console, "log").mockImplementation((msg?: unknown) => { logs.push(String(msg ?? "")); });
-  vi.spyOn(console, "error").mockImplementation((msg?: unknown) => { errs.push(String(msg ?? "")); });
+  vi.spyOn(console, "log").mockImplementation((msg?: unknown) => {
+    logs.push(String(msg ?? ""));
+  });
+  vi.spyOn(console, "error").mockImplementation((msg?: unknown) => {
+    errs.push(String(msg ?? ""));
+  });
 });
 
 afterEach(() => {
@@ -34,7 +38,7 @@ describe("runInit (dumb copy)", () => {
     expect(code).toBe(0);
     expect(fs.existsSync(target)).toBe(true);
     const body = fs.readFileSync(target, "utf8");
-    expect(body).toContain("\"profiles\"");
+    expect(body).toContain('"profiles"');
     expect(logs.join("\n")).toContain(target);
   });
 
@@ -59,13 +63,13 @@ describe("runInit (dumb copy)", () => {
     fs.writeFileSync(target, "existing");
     const code = await runInit(["--path", target, "--force"]);
     expect(code).toBe(0);
-    expect(fs.readFileSync(target, "utf8")).toContain("\"profiles\"");
+    expect(fs.readFileSync(target, "utf8")).toContain('"profiles"');
   });
 
   it("--print writes the example to stdout and does not touch disk", async () => {
     const code = await runInit(["--print"]);
     expect(code).toBe(0);
     expect(fs.existsSync(path.join(tmpRoot, ".global_sqls", "connections.json"))).toBe(false);
-    expect(logs.join("\n")).toContain("\"profiles\"");
+    expect(logs.join("\n")).toContain('"profiles"');
   });
 });
