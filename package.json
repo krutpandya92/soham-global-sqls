@@ -60,7 +60,7 @@
     "node-sql-parser": "^5.4.0",
     "oracledb": "^6.6.0",
     "pg": "^8.13.0",
-    "zod": "^3.23.8"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/mssql": "^9.1.5",
