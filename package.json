@@ -1,6 +1,6 @@
 {
   "name": "soham-global-sqls",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Multi-engine SQL MCP server (MSSQL, MySQL, PostgreSQL, Oracle) with named connection profiles, audit logging, and a one-command setup wizard.",
   "type": "module",
   "main": "build/index.js",
