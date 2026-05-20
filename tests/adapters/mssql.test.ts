@@ -1,14 +1,61 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { mockRequest, mockPool } = vi.hoisted(() => {
+// The mock models node-mssql's two connection styles faithfully:
+//  - the GLOBAL `sql.connect()` returns one shared pool per process
+//  - `new sql.ConnectionPool()` returns a fresh, isolated pool each time
+// A pool whose `close()` has run throws "Connection is closed." on request(),
+// exactly like the real driver.
+const { mockRequest, makePool } = vi.hoisted(() => {
   const mockRequest = { input: vi.fn().mockReturnThis(), query: vi.fn() };
-  const mockPool = { connected: true, request: () => mockRequest, close: vi.fn(), on: vi.fn() };
-  return { mockRequest, mockPool };
+  type Pool = {
+    config: unknown;
+    connected: boolean;
+    on: () => void;
+    connect: () => Promise<Pool>;
+    close: () => Promise<void>;
+    request: () => typeof mockRequest;
+  };
+  const makePool = (config: unknown): Pool => {
+    const pool: Pool = {
+      config,
+      connected: false,
+      on: vi.fn(),
+      connect: vi.fn(() => {
+        pool.connected = true;
+        return Promise.resolve(pool);
+      }),
+      close: vi.fn(() => {
+        pool.connected = false;
+        return Promise.resolve();
+      }),
+      request: () => {
+        if (!pool.connected) throw new Error("Connection is closed.");
+        return mockRequest;
+      },
+    };
+    return pool;
+  };
+  return { mockRequest, makePool };
 });
 
-vi.mock("mssql", () => ({
-  default: { connect: vi.fn().mockResolvedValue(mockPool), ConnectionPool: class {} },
-}));
+vi.mock("mssql", () => {
+  let globalPool: ReturnType<typeof makePool> | null = null;
+  return {
+    default: {
+      // Global connection: one shared pool, config of later calls ignored.
+      connect: vi.fn((config: unknown) => {
+        globalPool ??= makePool(config);
+        return globalPool.connect();
+      }),
+      // Per-instance connection: a distinct pool object every time.
+      ConnectionPool: class {
+        constructor(config: unknown) {
+          return makePool(config);
+        }
+      },
+    },
+  };
+});
 
 import { MssqlAdapter } from "../../src/adapters/mssql.js";
 
@@ -64,5 +111,17 @@ describe("MssqlAdapter", () => {
     expect(mockRequest.input).toHaveBeenCalledWith("p1", 5);
     expect(res.rows.length).toBe(3);
     expect(res.truncated).toBe(true);
+  });
+
+  it("isolates each adapter's pool — closing one must not break another", async () => {
+    // Mirrors ConnectionManager.use(): connect the new adapter, then close
+    // the previously-active one. The still-active adapter must keep working.
+    const a1 = new MssqlAdapter("one", profile);
+    const a2 = new MssqlAdapter("two", profile);
+    await a1.connect();
+    await a2.connect();
+    await a1.close();
+    mockRequest.query.mockResolvedValueOnce({ recordset: [{ ok: 1 }] });
+    expect(await a2.ping()).toBe(true);
   });
 });

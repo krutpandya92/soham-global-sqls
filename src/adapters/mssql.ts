@@ -19,7 +19,11 @@ export class MssqlAdapter implements SqlAdapter {
   ) {}
 
   async connect(): Promise<void> {
-    this.pool = await sql.connect({
+    // Use a dedicated ConnectionPool per adapter — NOT the global `sql.connect()`,
+    // which shares one pool process-wide. With the global pool, switching
+    // profiles hands every adapter the same pool, and closing the old adapter
+    // tears down the connection the new one depends on.
+    const pool = new sql.ConnectionPool({
       server: this.profile.host,
       port: this.profile.port,
       database: this.profile.database,
@@ -33,6 +37,8 @@ export class MssqlAdapter implements SqlAdapter {
       },
       pool: { max: 10, min: 1, idleTimeoutMillis: 30_000 },
     });
+    await pool.connect();
+    this.pool = pool;
   }
 
   async close(): Promise<void> {
