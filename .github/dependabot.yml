@@ -13,6 +13,10 @@ updates:
       dev-deps:
         dependency-type: development
         update-types: [minor, patch]
+    # Major bumps are breaking and fail CI; review and bump them manually.
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directory: /
